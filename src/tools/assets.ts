@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolRegistrar } from "./types.js";
-import { formatError } from "./types.js";
+import { formatError, nextPageHint } from "./types.js";
 import { PUBLIC_OPENAPI_TOOL_METADATA } from "../generated/public-openapi-tool-metadata.js";
 import { toolMeta } from "../openai/meta.js";
 
@@ -71,7 +71,6 @@ const UpdateAssetMetadataSchema = z.object({
 const GenerateAssetAltTextSchema = z.object({
   id: z.string().describe("Asset ID"),
   detailLevel: z.enum(["caption", "detailed-caption", "more-detailed-caption"]).default("caption").describe("Level of detail for the generated alt text"),
-  model: z.string().optional().describe("AI model to use (default: florence)"),
   orgId,
 }).strict();
 
@@ -111,11 +110,12 @@ export const registerAssetTools: ToolRegistrar = (server, context) => {
         const result = await client.listAssets(params);
 
         const summary = result.assets.map((a) =>
-          `- ${a.filename || "Untitled"} (${a.mimeType || "unknown"}) ${a.isFavorite ? "[fav]" : ""}`
+          `- ${a.filename || "Untitled"} (${a.mimeType || "unknown"}) id: ${a.id} url: ${a.url}${a.isFavorite ? " [fav]" : ""}`
         ).join("\n");
+        const more = nextPageHint(result.total, params.offset, result.assets.length);
 
         return {
-          content: [{ type: "text", text: `Found ${result.total} assets.\n\n${summary}` }],
+          content: [{ type: "text", text: `Found ${result.total} assets.\n\n${summary}${more}` }],
           structuredContent: result,
         };
       } catch (error) {
@@ -189,11 +189,12 @@ export const registerAssetTools: ToolRegistrar = (server, context) => {
         const result = await client.searchAssets(params);
 
         const summary = result.hits.map((h) =>
-          `- ${h.filename || "Untitled"} (${h.mimeType || "unknown"}) ${h.isFavorite ? "[fav]" : ""}`
+          `- ${h.filename || "Untitled"} (${h.mimeType || "unknown"}) id: ${h.id}${h.isFavorite ? " [fav]" : ""}`
         ).join("\n");
+        const more = nextPageHint(result.total, params.offset, result.hits.length);
 
         return {
-          content: [{ type: "text", text: `Found ${result.total} results for "${result.query}".\n\n${summary}` }],
+          content: [{ type: "text", text: `Found ${result.total} results for "${result.query}".\n\n${summary}${more}` }],
           structuredContent: result,
         };
       } catch (error) {
@@ -242,7 +243,7 @@ Returns:
         const summary = result.results.map((match) => {
           const filename = match.asset.filename || "Untitled";
           const mimeType = match.asset.mimeType || "unknown";
-          return `- ${filename} (${mimeType}) score ${match.score.toFixed(2)}`;
+          return `- ${filename} (${mimeType}) id: ${match.asset.id} score ${match.score.toFixed(2)}`;
         }).join("\n");
 
         return {

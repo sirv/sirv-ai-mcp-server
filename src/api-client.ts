@@ -30,6 +30,17 @@ import type {
 import { getValidAccessToken, ensureAuthenticated, clearToken } from "./oauth.js";
 import { MCP_METERED_HEADER, meteredSignature } from "./jwt.js";
 
+// Encodes each value as one path segment, so an id like "../products/x" cannot retarget a call.
+// URL parsers still resolve a bare "." or ".." segment, even encoded, so those are refused.
+const path = (strings: TemplateStringsArray, ...values: string[]) =>
+  String.raw(
+    { raw: strings },
+    ...values.map((value) => {
+      if (value === "." || value === "..") throw new Error(`Invalid id: ${value}`);
+      return encodeURIComponent(value);
+    }),
+  );
+
 const DEFAULT_TIMEOUT = 120000;
 const LONG_TIMEOUT = 300000;
 
@@ -797,7 +808,7 @@ export class SirvApiClient {
     }
 
     const data = await this.request<{ workflow: WorkflowRow }>(
-      `/api/workflows/${workflowId}`
+      path`/api/workflows/${workflowId}`
     );
     const w = data.workflow;
 
@@ -850,7 +861,7 @@ export class SirvApiClient {
   }
 
   async getAsset(id: string, orgId?: string): Promise<Asset> {
-    return this.request<Asset>(`/api/assets/${id}`, "GET", undefined, DEFAULT_TIMEOUT, undefined, orgId);
+    return this.request<Asset>(path`/api/assets/${id}`, "GET", undefined, DEFAULT_TIMEOUT, undefined, orgId);
   }
 
   async searchAssets(params: {
@@ -900,15 +911,15 @@ export class SirvApiClient {
     altText?: string;
     isFavorite?: boolean;
   }, orgId?: string): Promise<Asset> {
-    return this.request<Asset>(`/api/assets/${id}`, "PATCH", data as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId);
+    return this.request<Asset>(path`/api/assets/${id}`, "PATCH", data as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId);
   }
 
   async deleteAsset(id: string, orgId?: string): Promise<{ deleted: boolean }> {
-    return this.request<{ deleted: boolean }>(`/api/assets/${id}`, "DELETE", undefined, DEFAULT_TIMEOUT, undefined, orgId);
+    return this.request<{ deleted: boolean }>(path`/api/assets/${id}`, "DELETE", undefined, DEFAULT_TIMEOUT, undefined, orgId);
   }
 
   async getAssetMetadata(id: string, orgId?: string): Promise<AssetMetadataResponse> {
-    return this.request<AssetMetadataResponse>(`/api/assets/${id}/metadata`, "GET", undefined, DEFAULT_TIMEOUT, undefined, orgId);
+    return this.request<AssetMetadataResponse>(path`/api/assets/${id}/metadata`, "GET", undefined, DEFAULT_TIMEOUT, undefined, orgId);
   }
 
   async updateAssetMetadata(id: string, data: {
@@ -916,16 +927,15 @@ export class SirvApiClient {
     templateId?: string | null;
   }, orgId?: string): Promise<AssetMetadataResponse> {
     return this.request<AssetMetadataResponse>(
-      `/api/assets/${id}/metadata`, "PATCH", data as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId
+      path`/api/assets/${id}/metadata`, "PATCH", data as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId
     );
   }
 
   async generateAssetAltText(id: string, options: {
     detailLevel?: string;
-    model?: string;
   } = {}, orgId?: string): Promise<{ altText: string }> {
     return this.request<{ altText: string }>(
-      `/api/assets/${id}/alt-text`, "POST", options as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId
+      path`/api/assets/${id}/alt-text`, "POST", options as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId
     );
   }
 
@@ -958,7 +968,7 @@ export class SirvApiClient {
     orgId?: string,
   ): Promise<Record<string, unknown>> {
     return this.request<Record<string, unknown>>(
-      `/api/zapier/sirv/${action}`, "POST", data, DEFAULT_TIMEOUT, undefined, orgId
+      path`/api/zapier/sirv/${action}`, "POST", data, DEFAULT_TIMEOUT, undefined, orgId
     );
   }
 
@@ -990,7 +1000,7 @@ export class SirvApiClient {
   }
 
   async getProduct(id: string, orgId?: string): Promise<Product> {
-    return this.request<Product>(`/api/products/${id}`, "GET", undefined, DEFAULT_TIMEOUT, undefined, orgId);
+    return this.request<Product>(path`/api/products/${id}`, "GET", undefined, DEFAULT_TIMEOUT, undefined, orgId);
   }
 
   async createProduct(data: {
@@ -1015,11 +1025,11 @@ export class SirvApiClient {
     productType?: string | null;
     tags?: string[];
   }, orgId?: string): Promise<Product> {
-    return this.request<Product>(`/api/products/${id}`, "PATCH", data as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId);
+    return this.request<Product>(path`/api/products/${id}`, "PATCH", data as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId);
   }
 
   async deleteProduct(id: string, orgId?: string): Promise<{ success: boolean }> {
-    return this.request<{ success: boolean }>(`/api/products/${id}`, "DELETE", undefined, DEFAULT_TIMEOUT, undefined, orgId);
+    return this.request<{ success: boolean }>(path`/api/products/${id}`, "DELETE", undefined, DEFAULT_TIMEOUT, undefined, orgId);
   }
 
   async searchProducts(params: {
@@ -1062,7 +1072,7 @@ export class SirvApiClient {
     role?: string;
   }, orgId?: string): Promise<{ success: boolean; linked: number }> {
     return this.request<{ success: boolean; linked: number }>(
-      `/api/products/${productId}/assets`, "POST", data as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId
+      path`/api/products/${productId}/assets`, "POST", data as Record<string, unknown>, DEFAULT_TIMEOUT, undefined, orgId
     );
   }
 

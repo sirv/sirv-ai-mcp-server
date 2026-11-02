@@ -1,10 +1,11 @@
 import express, { Request, Response, NextFunction } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { SUPPORTED_PROTOCOL_VERSIONS } from "@modelcontextprotocol/sdk/types.js";
 import https from "https";
 import http from "http";
 import fs from "fs";
-import { getStudioBaseUrl } from "./constants.js";
+import { getStudioBaseUrl, REGISTRY_NAME, SERVER_VERSION } from "./constants.js";
 import { verifyAccessToken } from "./jwt.js";
 
 // API key validation via main API
@@ -308,6 +309,15 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
     trustProxy === "true" ? true : trustProxy === "false" ? false : trustProxy,
   );
 
+  // Skip auth in development mode for local testing with MCP Inspector
+  const skipAuth = process.env.MCP_SKIP_AUTH === "true";
+  if (skipAuth && process.env.NODE_ENV === "production") {
+    throw new Error("MCP_SKIP_AUTH cannot be true in production");
+  }
+  if (skipAuth) {
+    console.error("⚠️  WARNING: Auth disabled (MCP_SKIP_AUTH=true) - for local testing only!");
+  }
+
   const allowedOrigins = config.corsOrigins || [
     "https://claude.ai",
     "https://console.anthropic.com",
@@ -340,6 +350,12 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
 
       if (isAllowed) {
         res.setHeader("Access-Control-Allow-Origin", origin);
+      } else if (skipAuth) {
+        // Without auth, a web page could drive the local user's credentials (DNS rebinding).
+        // ponytail: with auth on, a bearer token is required and server-side connectors may send
+        // an unlisted Origin, so refusing every foreign Origin there needs a client survey first.
+        res.status(403).json({ error: "Origin not allowed" });
+        return;
       }
     }
 
@@ -430,6 +446,46 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
     });
   });
 
+  // MCP Server Card (SEP-2127): public, read-only metadata, so any origin may read it.
+  const serverCard = JSON.stringify({
+    $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+    name: REGISTRY_NAME,
+    title: "Sirv AI Studio",
+    description: "AI image, video and 3D tools, assets, products and Shopify for Sirv AI Studio.",
+    version: SERVER_VERSION,
+    websiteUrl: `${oauthServerUrl}/docs/developers/mcp`,
+    repository: { url: "https://github.com/sirv/sirv-ai-mcp-server", source: "github" },
+    remotes: [{ type: "streamable-http", url: config.baseUrl, supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS }],
+  });
+  const sendPublic = (res: Response, type: string, body: string) => {
+    res.set({
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": `public, max-age=${OAUTH_METADATA_CACHE_SECONDS}`,
+      "Content-Type": type,
+    });
+    res.send(body);
+  };
+  // /server-card is the recommended location; the .well-known paths serve older checkers.
+  app.get(["/server-card", "/.well-known/mcp", "/.well-known/mcp.json"], (_req: Request, res: Response) =>
+    sendPublic(res, "application/mcp-server-card+json", serverCard),
+  );
+  app.get("/.well-known/ai-catalog.json", (_req: Request, res: Response) =>
+    sendPublic(
+      res,
+      "application/ai-catalog+json",
+      JSON.stringify({
+        specVersion: "1.0",
+        entries: [
+          {
+            identifier: "urn:air:sirv.studio:mcp:sirv-ai-studio",
+            type: "application/mcp-server-card+json",
+            url: `${config.baseUrl}/server-card`,
+          },
+        ],
+      }),
+    ),
+  );
+
   app.get("/.well-known/oauth-protected-resource", (req: Request, res: Response) => {
     res.setHeader("Cache-Control", `public, max-age=${OAUTH_METADATA_CACHE_SECONDS}`);
     // OAuth 2.0 Protected Resource Metadata per RFC 9728
@@ -459,7 +515,7 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
   const RATE_LIMIT_MAX_REQUESTS = 100;
   const RATE_LIMIT_MAX_ENTRIES = 10000; // Maximum unique IPs to track
 
-  function checkRateLimit(ip: string): boolean {
+  function checkRateLimit(ip: string, max = RATE_LIMIT_MAX_REQUESTS): boolean {
     const now = Date.now();
     const entry = rateLimitMap.get(ip);
 
@@ -489,13 +545,23 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
       return true;
     }
 
-    if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    if (entry.count >= max) {
       return false;
     }
 
     entry.count++;
     return true;
   }
+
+  // Invalid API keys are limited per IP, so fake keys cannot flood Studio's key check.
+  // Signed-in traffic is limited per caller: Claude and ChatGPT reach us from a few shared IPs.
+  const KEY_FAILURES_PER_MINUTE = 30;
+  const clientIpOf = (req: Request) => req.ip || req.socket.remoteAddress || "unknown";
+  const keyFailureKey = (req: Request) => `key-fail:${clientIpOf(req)}`;
+  const refundKeySlot = (req: Request) => {
+    const entry = rateLimitMap.get(keyFailureKey(req));
+    if (entry && entry.count > 0) entry.count--;
+  };
 
   setInterval(() => {
     const now = Date.now();
@@ -504,7 +570,12 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
         rateLimitMap.delete(ip);
       }
     }
-  }, 60000);
+    for (const [key, entry] of apiKeyCache.entries()) {
+      if (now > entry.expiresAt) {
+        apiKeyCache.delete(key);
+      }
+    }
+  }, 60000).unref();
 
   // HEAD endpoint for MCP protocol discovery (required by claude.ai)
   app.head("/", (req: Request, res: Response) => {
@@ -512,21 +583,14 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
     res.status(200).end();
   });
 
-  // Skip auth in development mode for local testing with MCP Inspector
-  const skipAuth = process.env.MCP_SKIP_AUTH === "true";
-  if (skipAuth && process.env.NODE_ENV === "production") {
-    throw new Error("MCP_SKIP_AUTH cannot be true in production");
-  }
-  if (skipAuth) {
-    console.error("⚠️  WARNING: Auth disabled (MCP_SKIP_AUTH=true) - for local testing only!");
-  }
-
-  // Cache for validated API keys (short TTL to balance performance and security)
-  const apiKeyCache = new Map<
-    string,
-    { valid: boolean; userId?: string; orgId?: string; expiresAt: number }
-  >();
+  // Cache for valid API keys only (short TTL to balance performance and security)
+  const apiKeyCache = new Map<string, { userId?: string; orgId?: string; expiresAt: number }>();
   const API_KEY_CACHE_TTL = 30 * 1000; // 30 seconds
+
+  // Every 401 points at the resource metadata so clients can re-run OAuth discovery (RFC 9728).
+  const challenge = (error?: string) =>
+    `Bearer resource="${config.baseUrl}", resource_metadata="${config.baseUrl}/.well-known/oauth-protected-resource"` +
+    (error ? `, error="invalid_token", error_description="${error}"` : "");
 
   // Authentication middleware for MCP endpoints
   // Returns 401 with WWW-Authenticate to trigger OAuth flow per RFC 9728
@@ -540,11 +604,7 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      // Include resource_metadata URL per MCP 2025-06-18 spec
-      res.setHeader(
-        "WWW-Authenticate",
-        `Bearer resource="${config.baseUrl}", resource_metadata="${config.baseUrl}/.well-known/oauth-protected-resource"`,
-      );
+      res.setHeader("WWW-Authenticate", challenge());
       res.status(401).json({
         error: "unauthorized",
         error_description: "Bearer token required",
@@ -568,21 +628,26 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
       // Check cache first
       const cached = apiKeyCache.get(token);
       if (cached && cached.expiresAt > Date.now()) {
-        if (cached.valid) {
-          res.locals.caller = {
-            credential: "api_key",
-            userId: cached.userId,
-            orgId: cached.orgId,
-          } satisfies McpCaller;
-          next();
-          return;
-        }
+        res.locals.caller = {
+          credential: "api_key",
+          userId: cached.userId,
+          orgId: cached.orgId,
+        } satisfies McpCaller;
+        next();
+        return;
+      }
+
+      // Reserve a failure slot before the await, so concurrent fake keys cannot all slip past.
+      if (!checkRateLimit(keyFailureKey(req), KEY_FAILURES_PER_MINUTE)) {
+        res.status(429).json({ error: "Rate limit exceeded" });
+        return;
       }
 
       // Validate API key via main API
       const apiKeyResult = await validateApiKey(token, oauthServerUrl);
 
       if (apiKeyResult.unavailable) {
+        refundKeySlot(req);
         res.setHeader("Retry-After", "30");
         res.status(503).json({
           error: "temporarily_unavailable",
@@ -591,13 +656,13 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
         return;
       }
 
-      // Cache the result
-      apiKeyCache.set(token, {
-        ...apiKeyResult,
-        expiresAt: Date.now() + API_KEY_CACHE_TTL,
-      });
-
       if (apiKeyResult.valid) {
+        refundKeySlot(req);
+        apiKeyCache.set(token, {
+          userId: apiKeyResult.userId,
+          orgId: apiKeyResult.orgId,
+          expiresAt: Date.now() + API_KEY_CACHE_TTL,
+        });
         res.locals.caller = {
           credential: "api_key",
           userId: apiKeyResult.userId,
@@ -607,10 +672,7 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
         return;
       }
 
-      res.setHeader(
-        "WWW-Authenticate",
-        `Bearer resource="${config.baseUrl}", error="invalid_token", error_description="Invalid API key"`,
-      );
+      res.setHeader("WWW-Authenticate", challenge("Invalid API key"));
       res.status(401).json({
         error: "invalid_token",
         error_description: "Invalid API key",
@@ -621,10 +683,7 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
     // Validate JWT token
     const tokenData = await verifyAccessToken(token);
     if (!tokenData) {
-      res.setHeader(
-        "WWW-Authenticate",
-        `Bearer resource="${config.baseUrl}", error="invalid_token", error_description="Token is invalid or expired"`,
-      );
+      res.setHeader("WWW-Authenticate", challenge("Token is invalid or expired"));
       res.status(401).json({
         error: "invalid_token",
         error_description: "Token is invalid or expired",
@@ -645,9 +704,10 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
   // Creates a fresh server and transport for each request (no shared state)
   // See: https://github.com/yigitkonur/example-mcp-server-streamable-http-stateless
   const handleMcpRequest = async (req: Request, res: Response) => {
-    const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+    const clientIp = clientIpOf(req);
+    const caller = res.locals.caller as McpCaller | undefined;
 
-    if (!checkRateLimit(clientIp)) {
+    if (!checkRateLimit(`caller:${caller?.userId ?? clientIp}`)) {
       res.status(429).json({ error: "Rate limit exceeded" });
       return;
     }
@@ -683,7 +743,7 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
         metered = meterResult.counted;
       }
 
-      logToolCalls(req.body, res.locals.caller as McpCaller | undefined);
+      logToolCalls(req.body, caller);
 
       if (DEBUG) {
         const body = req.body;
@@ -728,7 +788,7 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
   app.all("/mcp", requireAuth, handleMcpRequest);
 
   app.get("/health", (req: Request, res: Response) => {
-    res.json({ status: "ok", version: "1.0.5" });
+    res.json({ status: "ok", version: SERVER_VERSION });
   });
 
   let server: http.Server | https.Server;

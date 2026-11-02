@@ -1,0 +1,34 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.sirv/sirv-ai-mcp-server",
+  "title": "Sirv AI Studio",
+  "description": "AI image, video and 3D tools, assets, products and Shopify for Sirv AI Studio.",
+  "version": "1.1.0",
+  "websiteUrl": "https://www.sirv.studio/docs/developers/mcp",
+  "repository": {
+    "url": "https://github.com/sirv/sirv-ai-mcp-server",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "sirv-ai-mcp-server",
+      "version": "1.1.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "SIRV_AI_API_KEY",
+          "description": "Studio API key. Without it, the server signs in through the browser.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.sirv.studio"
+    }
+  ]
+}

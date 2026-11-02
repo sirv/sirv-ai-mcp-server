@@ -1,14 +1,16 @@
 #!/usr/bin/env node
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SirvApiClient } from "./api-client.js";
 import { getStudioBaseUrl } from "./constants.js";
 import { createHttpServer } from "./http-server.js";
-import { registerAllTools } from "./tools/index.js";
+import { createMcpServer } from "./server.js";
 
 const TRANSPORT_MODE = process.env.MCP_TRANSPORT || "stdio";
 const HTTP_PORT = parseInt(process.env.MCP_HTTP_PORT || "3001", 10);
-const HTTP_HOST = process.env.MCP_HTTP_HOST || "0.0.0.0";
+// With auth skipped, the server acts with the local user's credentials, so keep it off the network.
+const HTTP_HOST =
+  process.env.MCP_HTTP_HOST || (process.env.MCP_SKIP_AUTH === "true" ? "127.0.0.1" : "0.0.0.0");
 const ENABLE_IP_ALLOWLIST = process.env.MCP_ENABLE_IP_ALLOWLIST === "true";
 const SSL_KEY_PATH = process.env.MCP_SSL_KEY_PATH;
 const SSL_CERT_PATH = process.env.MCP_SSL_CERT_PATH;
@@ -38,16 +40,9 @@ function getApiClient(requestToken?: string, metered?: boolean): SirvApiClient {
   return cachedClient;
 }
 
-// Factory function to create a new MCP server instance with all tools registered
-// Used for stateless HTTP mode where each request gets a fresh server
-function createMcpServer(requestToken?: string, metered?: boolean): McpServer {
-  const server = new McpServer(
-    { name: "sirv-ai-mcp-server", version: "1.0.0" },
-    // Well above a 500-asset bulk call; reject large records before schema validation.
-    { maxToolInputElements: 10_000 },
-  );
-  registerAllTools(server, { getApiClient: () => getApiClient(requestToken, metered) });
-  return server;
+// Stateless HTTP mode builds a fresh server per request.
+function serverFor(requestToken?: string, metered?: boolean): McpServer {
+  return createMcpServer({ getApiClient: () => getApiClient(requestToken, metered) });
 }
 
 async function main() {
@@ -80,7 +75,7 @@ async function main() {
     const mcpBaseUrl = process.env.MCP_BASE_URL || `http://localhost:${HTTP_PORT}`;
 
     // Pass factory function for stateless mode (fresh server per request)
-    const httpServer = createHttpServer(createMcpServer, {
+    const httpServer = createHttpServer(serverFor, {
       port: HTTP_PORT,
       host: HTTP_HOST,
       baseUrl: mcpBaseUrl,
@@ -100,7 +95,7 @@ async function main() {
     );
   } else {
     // Stdio mode uses a single persistent server instance
-    const server = createMcpServer();
+    const server = serverFor();
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error("Sirv AI MCP Server running via stdio");

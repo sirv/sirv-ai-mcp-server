@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolRegistrar } from "./types.js";
-import { formatError } from "./types.js";
+import { formatError, nextPageHint } from "./types.js";
 import { PUBLIC_OPENAPI_TOOL_METADATA } from "../generated/public-openapi-tool-metadata.js";
 import { toolMeta } from "../openai/meta.js";
 
@@ -117,11 +117,12 @@ export const registerProductManagementTools: ToolRegistrar = (server, context) =
         const result = await client.listProducts(params);
 
         const summary = result.products.map((p) =>
-          `- ${p.name} (SKU: ${p.sku}) [${p.status}]`
+          `- ${p.name} (SKU: ${p.sku}) [${p.status}] id: ${p.id}`
         ).join("\n");
+        const more = nextPageHint(result.total, params.offset, result.products.length);
 
         return {
-          content: [{ type: "text", text: `Found ${result.total} products.\n\n${summary}` }],
+          content: [{ type: "text", text: `Found ${result.total} products.\n\n${summary}${more}` }],
           structuredContent: result,
         };
       } catch (error) {
@@ -293,7 +294,7 @@ export const registerProductManagementTools: ToolRegistrar = (server, context) =
         const result = await client.searchProducts(params);
 
         const summary = result.products.map((p) =>
-          `- ${p.name} (SKU: ${p.sku}) [${p.status}]`
+          `- ${p.name} (SKU: ${p.sku}) [${p.status}] id: ${p.id}`
         ).join("\n");
 
         return {
@@ -329,11 +330,12 @@ export const registerProductManagementTools: ToolRegistrar = (server, context) =
         const result = await client.listProductsWithAssets(params);
 
         const summary = result.products.map((p) =>
-          `- ${p.name} (${p.assetCount} assets) [${p.status}]`
+          `- ${p.name} (${p.assetCount} assets) [${p.status}] id: ${p.id}`
         ).join("\n");
+        const more = nextPageHint(result.total, params.offset, result.products.length);
 
         return {
-          content: [{ type: "text", text: `Found ${result.total} products.\n\n${summary}` }],
+          content: [{ type: "text", text: `Found ${result.total} products.\n\n${summary}${more}` }],
           structuredContent: result,
         };
       } catch (error) {

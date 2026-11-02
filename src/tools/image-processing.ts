@@ -98,7 +98,7 @@ export const registerImageProcessingTools: ToolRegistrar = (server, context) => 
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
-        idempotentHint: true,
+        idempotentHint: false,
         openWorldHint: true,
       },
       _meta: toolMeta.removeBackground,
@@ -155,7 +155,7 @@ export const registerImageProcessingTools: ToolRegistrar = (server, context) => 
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
-        idempotentHint: true,
+        idempotentHint: false,
         openWorldHint: true,
       },
       _meta: toolMeta.upscale,

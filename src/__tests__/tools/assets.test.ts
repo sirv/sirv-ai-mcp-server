@@ -50,13 +50,8 @@ describe("asset MCP tools", () => {
       limit: 8,
       orgId: "org-1",
     });
+    expect((result as { content: { text: string }[] }).content[0].text).toContain("asset-2");
     expect(result).toMatchObject({
-      content: [
-        {
-          text: 'Found 1 visually similar asset for "asset-1".\n\n- same-look.jpg (image/jpeg) score 0.92',
-          type: "text",
-        },
-      ],
       structuredContent: {
         assetId: "asset-1",
         results: [

@@ -24,9 +24,9 @@ export const registerAnalysisTools: ToolRegistrar = (server, context) => {
       description: PUBLIC_OPENAPI_TOOL_METADATA.sirv_alt_text.description,
       inputSchema: AltTextSchema,
       annotations: {
-        readOnlyHint: true,
+        readOnlyHint: false,
         destructiveHint: false,
-        idempotentHint: true,
+        idempotentHint: false,
         openWorldHint: true,
       },
       _meta: toolMeta.altText,
@@ -71,7 +71,7 @@ export const registerAnalysisTools: ToolRegistrar = (server, context) => {
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
-        idempotentHint: true,
+        idempotentHint: false,
         openWorldHint: true,
       },
       _meta: toolMeta.depthMap,

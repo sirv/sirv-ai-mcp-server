@@ -23,6 +23,12 @@ export function formatError(error: unknown): string {
   return String(error);
 }
 
+/** Tells the model how to get the next page, or nothing on the last page. */
+export function nextPageHint(total: number, offset: number, shown: number): string {
+  const next = offset + shown;
+  return next < total ? `\n\nShowing ${offset + 1}-${next} of ${total}. Pass offset=${next} for more.` : "";
+}
+
 export function truncateIfNeeded(text: string): string {
   if (text.length > CHARACTER_LIMIT) {
     return text.slice(0, CHARACTER_LIMIT) + "\n\n[Output truncated due to length]";

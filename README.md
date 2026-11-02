@@ -97,6 +97,11 @@ All DAM, product, Shopify, Supplier Portal and Sirv CDN tools accept an optional
 
 Every Studio plan includes API and MCP access; an admin can turn it off for a workspace. Preview-readable tools such as list, get, search, metadata-read, usage, organization, and workflow-read calls then execute without another tool-specific check. Mutation tools, direct AI tools that spend credits, batch operations, visual similarity, Shopify delivery/sync, and Supplier Portal Pro tools call Studio's `/api/mcp/authorize-tool` endpoint before execution and fail closed when the workspace lacks the matching entitlement.
 
+### Prompts
+
+- **prepare-listing-image** (`assetId`) - Remove the background, upscale if small, and write alt text for one library image
+- **alt-text-sweep** (`folderId`) - Find the images in a folder that have no alt text and write it, after the user confirms the cost
+
 ## Installation
 
 Use the hosted server at `https://mcp.sirv.studio`, or run the npm package:
@@ -182,6 +187,9 @@ When running in HTTP mode, the server exposes:
 HTTP requests accept uncompressed JSON up to 1 MiB. Tool arguments are limited to
 10,000 array elements and object members in total, including nested values. Split
 larger requests into smaller calls. File uploads use URLs rather than inline bytes.
+
+Each signed-in caller can send 100 requests a minute. One IP address can send 30
+invalid API keys a minute. Expired OAuth tokens do not count toward that limit.
 
 ### OAuth 2.0 Support
 
