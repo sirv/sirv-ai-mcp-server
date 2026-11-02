@@ -2,7 +2,7 @@
   "name": "sirv-ai-mcp-server",
   "version": "1.0.5",
   "description": "MCP server for Sirv AI Studio - AI-powered image and video processing",
-  "author": "Igor Varyvoda <igor@varyvoda.com>",
+  "author": "Sirv Ltd (https://www.sirv.studio)",
   "license": "MIT",
   "repository": {
     "type": "git",
