@@ -2,6 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SirvApiClient } from "./api-client.js";
+import { getStudioBaseUrl } from "./constants.js";
 import { createHttpServer } from "./http-server.js";
 import { registerAllTools } from "./tools/index.js";
 
@@ -17,7 +18,7 @@ const ADDITIONAL_ALLOWED_IPS = process.env.MCP_ALLOWED_IPS?.split(",").map((s) =
 let cachedClient: SirvApiClient | null = null;
 
 function getApiClient(requestToken?: string, metered?: boolean): SirvApiClient {
-  const baseUrl = process.env.SIRV_AI_BASE_URL || "http://localhost:3000";
+  const baseUrl = getStudioBaseUrl();
   const apiKey = process.env.SIRV_AI_API_KEY;
 
   // In HTTP mode with a request token, create a per-request client
@@ -50,12 +51,9 @@ function createMcpServer(requestToken?: string, metered?: boolean): McpServer {
 }
 
 async function main() {
-  const baseUrl = process.env.SIRV_AI_BASE_URL || "http://localhost:3000";
+  const baseUrl = getStudioBaseUrl();
   const apiKey = process.env.SIRV_AI_API_KEY;
 
-  console.error(
-    `SIRV_AI_BASE_URL=${process.env.SIRV_AI_BASE_URL || "(not set, using default: http://localhost:3000)"}`,
-  );
   console.error(`Backend URL: ${baseUrl}`);
 
   // If no API key, authenticate via OAuth before starting (only for stdio mode)

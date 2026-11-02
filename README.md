@@ -102,7 +102,7 @@ Every Studio plan includes API and MCP access; an admin can turn it off for a wo
 Use the hosted server at `https://mcp.sirv.studio`, or run the npm package:
 
 ```bash
-SIRV_AI_BASE_URL="https://www.sirv.studio" npx -y sirv-ai-mcp-server
+npx -y sirv-ai-mcp-server
 ```
 
 Use version 1.0.5 or later. Earlier versions are the legacy server from
@@ -121,7 +121,7 @@ node dist/index.js
 ### Environment Variables
 
 ```bash
-# Required: Sirv AI Studio URL
+# Optional: Sirv AI Studio URL (default: https://www.sirv.studio)
 SIRV_AI_BASE_URL="https://www.sirv.studio"
 
 # Optional: API key for authentication (if not using OAuth)

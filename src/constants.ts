@@ -1,5 +1,9 @@
 export const CHARACTER_LIMIT = 25000;
 
+export function getStudioBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  return env.SIRV_AI_BASE_URL || "https://www.sirv.studio";
+}
+
 export const BIREFNET_MODELS = {
   general: "General Use (Heavy)",
   portrait: "Portrait",

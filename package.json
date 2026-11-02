@@ -41,9 +41,9 @@
   "scripts": {
     "start": "node dist/index.js",
     "start:http": "MCP_TRANSPORT=http node dist/index.js",
-    "dev": "tsx watch src/index.ts",
-    "dev:http": "MCP_TRANSPORT=http tsx watch src/index.ts",
-    "dev:inspector": "MCP_TRANSPORT=http MCP_SKIP_AUTH=true tsx watch src/index.ts",
+    "dev": "SIRV_AI_BASE_URL=${SIRV_AI_BASE_URL:-http://localhost:3000} tsx watch src/index.ts",
+    "dev:http": "SIRV_AI_BASE_URL=${SIRV_AI_BASE_URL:-http://localhost:3000} MCP_TRANSPORT=http tsx watch src/index.ts",
+    "dev:inspector": "SIRV_AI_BASE_URL=${SIRV_AI_BASE_URL:-http://localhost:3000} MCP_TRANSPORT=http MCP_SKIP_AUTH=true tsx watch src/index.ts",
     "build": "tsc",
     "clean": "rm -rf dist",
     "typecheck": "bun check",

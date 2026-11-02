@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import https from "https";
 import http from "http";
 import fs from "fs";
+import { getStudioBaseUrl } from "./constants.js";
 import { verifyAccessToken } from "./jwt.js";
 
 // API key validation via main API
@@ -401,7 +402,7 @@ export function createHttpServer(serverFactory: McpServerFactory, config: HttpSe
   });
 
   // OAuth Authorization Server URL (the main app handles OAuth)
-  const oauthServerUrl = process.env.SIRV_AI_BASE_URL || "https://www.sirv.studio";
+  const oauthServerUrl = getStudioBaseUrl();
 
   // OpenAI plugin domain verification: the body is the portal token, nothing else.
   app.get("/.well-known/openai-apps-challenge", (req: Request, res: Response) => {
