@@ -1,0 +1,88 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sirv-ai-studio",
+  "version": "1.0.2",
+  "description": "Edit, generate and organise product images in Sirv AI Studio from ChatGPT.",
+  "author": {
+    "name": "Sirv",
+    "url": "https://www.sirv.studio"
+  },
+  "homepage": "https://www.sirv.studio",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Sirv AI Studio",
+        "shortDescription": "Product images, edited in chat",
+        "longDescription": "Sirv AI Studio prepares product images for online stores. Connect your Studio account, then ask ChatGPT to remove a background, upscale a photo, put a product in a new scene, write alt text, or find images in your library. The result shows next to the original so you can compare them, and every edited image stays in your Studio library.\n\nWho it is for: merchants, marketplace sellers and content teams who keep their product images in Sirv AI Studio.\n\nWhat you need: a Sirv AI Studio account. AI actions use the credits of the Studio workspace you pick when you sign in.\n\nLimits: an image must be reachable by URL, be uploaded in ChatGPT, or already be in your Studio library. Video, 3D, Shopify and Supplier Portal actions work only when your workspace has them turned on.",
+        "category": "Creativity",
+        "websiteURL": "https://www.sirv.studio",
+        "supportURL": "https://www.sirv.studio/contact?type=support",
+        "privacyPolicyURL": "https://www.sirv.studio/privacy",
+        "termsOfServiceURL": "https://www.sirv.studio/terms",
+        "defaultPrompt": [
+          "Remove the background from this product photo",
+          "Find photos of white sneakers in my Sirv AI Studio library",
+          "Put this product on a wooden table in morning light"
+        ],
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/composer-icon.png"
+      },
+      "publication": {
+        "release_notes": "First release: edit, generate and find product images in your Sirv AI Studio workspace."
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Remove the background from an image in the Studio library. The demo workspace has white-sneaker-studio.webp.",
+              "prompt": "Remove the background from white-sneaker-studio.webp in my Studio library",
+              "tools_triggered": "sirv_search_assets, sirv_get_asset, sirv_remove_background",
+              "expected_behavior": "Find the asset, remove the background, and show the original and the transparent PNG side by side. The result is saved as a new asset; the original stays unchanged."
+            },
+            {
+              "description": "Upscale an image in the Studio library. The demo workspace has leather-handbag.webp.",
+              "prompt": "Upscale leather-handbag.webp from my Studio library 2x",
+              "tools_triggered": "sirv_search_assets, sirv_upscale",
+              "expected_behavior": "Find the asset, upscale it 2x, and show the larger result with its new size. The result is saved as a new asset."
+            },
+            {
+              "description": "Put a product in a new lifestyle scene. The demo workspace has white-sneaker-side.webp.",
+              "prompt": "Put the white-sneaker-side.webp sneaker from my Studio library on a city sidewalk in soft morning light",
+              "tools_triggered": "sirv_search_assets, sirv_get_asset, sirv_product_lifestyle",
+              "expected_behavior": "Find the asset and generate a sidewalk scene that keeps the same sneaker. Show the result next to the original and save it as a new asset."
+            },
+            {
+              "description": "Search the Studio library. The demo workspace has three white sneaker images.",
+              "prompt": "Find images of white sneakers in my Studio library",
+              "tools_triggered": "sirv_search_assets",
+              "expected_behavior": "Return the three white sneaker images (white-sneaker-studio.webp, white-sneaker-side.webp, white-sneaker-concrete.webp) with their names and IDs. Nothing is changed."
+            },
+            {
+              "description": "Write alt text for an image and save it to the asset. The demo workspace has wristwatch.webp.",
+              "prompt": "Write alt text for wristwatch.webp in my Studio library and save it to the asset",
+              "tools_triggered": "sirv_search_assets, sirv_generate_asset_alt_text",
+              "expected_behavior": "Generate one short alt text sentence that describes the watch, save it to the asset, and show the saved text."
+            }
+          ],
+          "negative": [
+            {
+              "description": "General knowledge question with no image task. The plugin must not be used; ChatGPT answers directly.",
+              "prompt": "What is the capital of France?"
+            },
+            {
+              "description": "Text writing with no image task. The plugin must not be used; ChatGPT writes the post itself.",
+              "prompt": "Write a short blog post about spring sneaker trends"
+            },
+            {
+              "description": "Text translation with no image. The plugin has an image translation tool, but it must not be used for plain text; ChatGPT translates directly.",
+              "prompt": "Translate the sentence Free shipping on all orders into Spanish"
+            }
+          ]
+        },
+        "demo_recording_url": "https://assets.sirv.studio/review/openai/sirv-ai-studio-chatgpt-demo-2026-10-31.mp4",
+        "commerce": false,
+        "commerce_description": "This plugin does not sell products or process payments. AI actions use credits that the user already has in their Sirv AI Studio workspace."
+      }
+    }
+  }
+}

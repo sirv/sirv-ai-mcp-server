@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' https://assets.sirv.studio https://*.sirv.com https://*.fal.ai https://fal.media https://*.fal.media https://*.oaiusercontent.com data: blob:;
+    connect-src 'self' https://www.sirv.studio https://*.sirv.com https://*.fal.ai;
+    frame-ancestors 'self' https://chatgpt.com https://chat.openai.com;
+  " />
+  <title>Sirv AI Studio</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #10b981;
+      --error: #ef4444;
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .result-section {
+      display: none;
+    }
+
+    .result-section.visible {
+      display: block;
+    }
+
+    .images-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .image-box {
+      position: relative;
+      aspect-ratio: 1;
+      background: var(--bg);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .image-box img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .image-label {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .placeholder {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .tool-select {
+      margin-bottom: 16px;
+    }
+
+    .tool-select label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+
+    select, input[type="text"], input[type="url"], input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .setting-group label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .url-input-group {
+      margin-top: 16px;
+    }
+
+    .url-input-group input {
+      margin-bottom: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      width: 100%;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    .status.loading {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--primary);
+    }
+
+    .status.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .history {
+      margin-top: 16px;
+    }
+
+    .history h3 {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .history-items {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+
+    .history-item {
+      flex-shrink: 0;
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s ease;
+    }
+
+    .history-item:hover {
+      border-color: var(--primary);
+    }
+
+    .history-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      flex: 1;
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .tool-settings {
+      display: none;
+    }
+
+    .tool-settings.active {
+      display: block;
+    }
+
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+      margin-top: 16px;
+    }
+
+    .upload-area:hover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    .upload-area.dragging {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .upload-area input {
+      display: none;
+    }
+
+    .upload-area p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .upload-area .upload-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .input-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .input-tab {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .input-tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">S</div>
+      <h1>Sirv AI Studio</h1>
+    </div>
+
+    <div class="card result-section" id="result-section">
+      <div class="images-grid">
+        <div class="image-box">
+          <span class="image-label">Input</span>
+          <img id="input-image" alt="Input" />
+          <span class="placeholder" id="input-placeholder">No image</span>
+        </div>
+        <div class="image-box">
+          <span class="image-label">Result</span>
+          <img id="result-image" alt="Result" />
+          <span class="placeholder" id="result-placeholder">No result</span>
+        </div>
+      </div>
+      <div class="result-actions">
+        <a id="download-btn" class="btn btn-secondary" download>Download</a>
+        <button id="copy-url-btn" class="btn btn-secondary">Copy URL</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tool-select">
+        <label for="tool">Tool</label>
+        <select id="tool">
+          <option value="sirv_remove_background">Remove Background</option>
+          <option value="sirv_upscale">Upscale Image</option>
+          <option value="sirv_background_replace">Replace Background</option>
+          <option value="sirv_object_removal">Remove Objects</option>
+        </select>
+      </div>
+
+      <div class="input-tabs">
+        <button class="input-tab active" data-input="url">URL</button>
+        <button class="input-tab" data-input="upload">Upload</button>
+      </div>
+
+      <div id="url-input-section">
+        <div class="url-input-group">
+          <label for="image-url">Image URL</label>
+          <input type="url" id="image-url" placeholder="https://example.com/image.jpg" />
+        </div>
+      </div>
+
+      <div id="upload-input-section" class="hidden">
+        <div class="upload-area" id="upload-area">
+          <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp" />
+          <div class="upload-icon">📁</div>
+          <p>Drop an image here or click to upload</p>
+        </div>
+      </div>
+
+      <!-- Remove Background Settings -->
+      <div class="tool-settings active" data-tool="sirv_remove_background">
+        <div class="settings-grid">
+          <div class="setting-group">
+            <label for="bg-provider">Provider</label>
+            <select id="bg-provider">
+              <option value="birefnet">BiRefNet (Best)</option>
+              <option value="bria">Bria (Fast)</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label for="bg-model">Model</label>
+            <select id="bg-model">
+              <option value="General Use (Heavy)">Heavy (Best)</option>
+              <option value="General Use (Light)">Light</option>
+              <option value="Portrait">Portrait</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upscale Settings -->
+      <div class="tool-settings" data-tool="sirv_upscale">
+        <div class="settings-grid">
+          <div class="setting-group">
+            <label for="upscale-scale">Scale</label>
+            <select id="upscale-scale">
+              <option value="2">2x</option>
+              <option value="3">3x</option>
+              <option value="4">4x</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label for="upscale-model">Model</label>
+            <select id="upscale-model">
+              <option value="esrgan">ESRGAN (Fast)</option>
+              <option value="clarity">Clarity (AI)</option>
+              <option value="topaz">Topaz (Premium)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Background Replace Settings -->
+      <div class="tool-settings" data-tool="sirv_background_replace">
+        <div class="url-input-group" style="margin-top: 12px;">
+          <label for="bg-prompt">New Background Description</label>
+          <input type="text" id="bg-prompt" placeholder="A beach at sunset" />
+        </div>
+        <div class="settings-grid">
+          <div class="setting-group">
+            <label for="replace-model">Model</label>
+            <select id="replace-model">
+              <option value="nano-banana-lite">Nano Banana 2 Lite</option>
+              <option value="bria">Bria</option>
+              <option value="flux3-edit">FLUX.3 Edit</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Object Removal Settings -->
+      <div class="tool-settings" data-tool="sirv_object_removal">
+        <div class="url-input-group" style="margin-top: 12px;">
+          <label for="mask-url">Mask URL (white = remove)</label>
+          <input type="url" id="mask-url" placeholder="https://example.com/mask.png" />
+        </div>
+      </div>
+
+      <button id="process-btn" class="btn btn-primary" style="margin-top: 16px;">
+        Process Image
+      </button>
+
+      <div id="status" class="status hidden"></div>
+    </div>
+
+    <div class="card history hidden" id="history-section">
+      <h3>Recent Results</h3>
+      <div class="history-items" id="history-items"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // State
+    let history = [];
+    let currentResult = null;
+    let isProcessing = false;
+    let uploadedFileUrl = null;
+    let inputMode = "url";
+
+    // DOM elements
+    const toolSelect = document.getElementById("tool");
+    const imageUrlInput = document.getElementById("image-url");
+    const processBtn = document.getElementById("process-btn");
+    const statusDiv = document.getElementById("status");
+    const resultSection = document.getElementById("result-section");
+    const inputImage = document.getElementById("input-image");
+    const resultImage = document.getElementById("result-image");
+    const inputPlaceholder = document.getElementById("input-placeholder");
+    const resultPlaceholder = document.getElementById("result-placeholder");
+    const downloadBtn = document.getElementById("download-btn");
+    const copyUrlBtn = document.getElementById("copy-url-btn");
+    const historyItems = document.getElementById("history-items");
+    const historySection = document.getElementById("history-section");
+    const uploadArea = document.getElementById("upload-area");
+    const fileInput = document.getElementById("file-input");
+    const urlInputSection = document.getElementById("url-input-section");
+    const uploadInputSection = document.getElementById("upload-input-section");
+    const inputTabs = document.querySelectorAll(".input-tab");
+
+    // Apply theme from ChatGPT host
+    function applyTheme() {
+      const theme = window.openai?.theme || "light";
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+
+    // Apply locale
+    function applyLocale() {
+      const locale = window.openai?.locale || "en-US";
+      document.documentElement.lang = locale.split("-")[0];
+    }
+
+    // Report height to host
+    function reportHeight() {
+      if (window.openai?.notifyIntrinsicHeight) {
+        const height = document.body.scrollHeight;
+        window.openai.notifyIntrinsicHeight({ height });
+      }
+    }
+
+    // Persist widget state
+    function saveWidgetState() {
+      if (window.openai?.setWidgetState) {
+        window.openai.setWidgetState({
+          history: history.slice(0, 5),
+          lastTool: toolSelect.value,
+        });
+      }
+    }
+
+    // Load widget state
+    function loadWidgetState() {
+      const state = window.openai?.widgetState;
+      if (state) {
+        if (state.history) {
+          history = state.history;
+          renderHistory();
+        }
+        if (state.lastTool) {
+          toolSelect.value = state.lastTool;
+          updateToolSettings();
+        }
+      }
+    }
+
+    // Initialize from OpenAI tool output
+    function initFromOpenAI() {
+      applyTheme();
+      applyLocale();
+      loadWidgetState();
+
+      const output = window.openai?.toolOutput;
+      if (output && output.success) {
+        showResult(output);
+        addToHistory(output);
+      }
+
+      // Report initial height
+      setTimeout(reportHeight, 100);
+    }
+
+    // Listen for OpenAI updates
+    window.addEventListener("openai:set_globals", (event) => {
+      const globals = event.detail?.globals;
+
+      // Theme changed
+      if (globals?.theme) {
+        applyTheme();
+      }
+
+      // Tool output updated
+      const output = globals?.toolOutput;
+      if (output && output.success) {
+        showResult(output);
+        addToHistory(output);
+        setStatus("success", "Processing complete!");
+        isProcessing = false;
+        updateProcessButton();
+      } else if (output && !output.success) {
+        setStatus("error", output.error || "Processing failed");
+        isProcessing = false;
+        updateProcessButton();
+      }
+
+      reportHeight();
+    }, { passive: true });
+
+    // Input mode tabs
+    inputTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        inputTabs.forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        inputMode = tab.dataset.input;
+
+        if (inputMode === "url") {
+          urlInputSection.classList.remove("hidden");
+          uploadInputSection.classList.add("hidden");
+        } else {
+          urlInputSection.classList.add("hidden");
+          uploadInputSection.classList.remove("hidden");
+        }
+        reportHeight();
+      });
+    });
+
+    // File upload handling
+    uploadArea.addEventListener("click", () => fileInput.click());
+
+    uploadArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      uploadArea.classList.add("dragging");
+    });
+
+    uploadArea.addEventListener("dragleave", () => {
+      uploadArea.classList.remove("dragging");
+    });
+
+    uploadArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove("dragging");
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleFileUpload(file);
+    });
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleFileUpload(file);
+    });
+
+    async function handleFileUpload(file) {
+      if (!file.type.match(/^image\/(png|jpeg|webp)$/)) {
+        setStatus("error", "Please upload PNG, JPEG, or WebP images");
+        return;
+      }
+
+      // Use ChatGPT's file upload if available
+      if (window.openai?.uploadFile) {
+        setStatus("loading", "Uploading image...");
+        try {
+          const { fileId } = await window.openai.uploadFile(file);
+          const { downloadUrl } = await window.openai.getFileDownloadUrl({ fileId });
+          uploadedFileUrl = downloadUrl;
+          showInputImage(downloadUrl);
+          setStatus("success", "Image uploaded!");
+          setTimeout(() => statusDiv.classList.add("hidden"), 2000);
+        } catch (err) {
+          setStatus("error", "Upload failed: " + (err.message || "Unknown error"));
+        }
+      } else {
+        // Fallback: create local blob URL for preview
+        uploadedFileUrl = URL.createObjectURL(file);
+        showInputImage(uploadedFileUrl);
+        setStatus("error", "File upload not available outside ChatGPT");
+      }
+    }
+
+    // Tool selection change
+    toolSelect.addEventListener("change", updateToolSettings);
+
+    function updateToolSettings() {
+      document.querySelectorAll(".tool-settings").forEach((el) => {
+        el.classList.remove("active");
+      });
+      const selectedTool = toolSelect.value;
+      const settings = document.querySelector(`[data-tool="${selectedTool}"]`);
+      if (settings) settings.classList.add("active");
+      reportHeight();
+    }
+
+    // Process button click
+    processBtn.addEventListener("click", async () => {
+      let imageUrl;
+
+      if (inputMode === "url") {
+        imageUrl = imageUrlInput.value.trim();
+        if (!imageUrl) {
+          setStatus("error", "Please enter an image URL");
+          return;
+        }
+      } else {
+        if (!uploadedFileUrl) {
+          setStatus("error", "Please upload an image first");
+          return;
+        }
+        imageUrl = uploadedFileUrl;
+      }
+
+      const tool = toolSelect.value;
+      const payload = buildPayload(tool, imageUrl);
+
+      isProcessing = true;
+      updateProcessButton();
+      setStatus("loading", getLoadingText(tool));
+
+      // Show input image preview
+      showInputImage(imageUrl);
+
+      // Call the tool
+      if (window.openai?.callTool) {
+        try {
+          const response = await window.openai.callTool(tool, payload);
+          if (response?.structuredContent?.success) {
+            showResult(response.structuredContent);
+            addToHistory(response.structuredContent);
+            setStatus("success", "Processing complete!");
+            saveWidgetState();
+          } else {
+            setStatus("error", response?.structuredContent?.error || "Processing failed");
+          }
+        } catch (err) {
+          setStatus("error", err.message || "An error occurred");
+        }
+      } else {
+        setStatus("error", "Not connected to ChatGPT. Use this widget inside ChatGPT.");
+      }
+
+      isProcessing = false;
+      updateProcessButton();
+    });
+
+    // Build payload based on selected tool
+    function buildPayload(tool, imageUrl) {
+      const payload = { image_url: imageUrl };
+
+      switch (tool) {
+        case "sirv_remove_background":
+          payload.provider = document.getElementById("bg-provider").value;
+          payload.model = document.getElementById("bg-model").value;
+          break;
+        case "sirv_upscale":
+          payload.scale = parseInt(document.getElementById("upscale-scale").value, 10);
+          payload.model = document.getElementById("upscale-model").value;
+          break;
+        case "sirv_background_replace":
+          payload.prompt = document.getElementById("bg-prompt").value;
+          payload.model = document.getElementById("replace-model").value;
+          break;
+        case "sirv_object_removal":
+          payload.mask_url = document.getElementById("mask-url").value;
+          break;
+      }
+
+      return payload;
+    }
+
+    function getLoadingText(tool) {
+      const texts = {
+        sirv_remove_background: "Removing background...",
+        sirv_upscale: "Upscaling image...",
+        sirv_background_replace: "Replacing background...",
+        sirv_object_removal: "Removing objects...",
+      };
+      return texts[tool] || "Processing...";
+    }
+
+    function showInputImage(url) {
+      inputImage.src = url;
+      inputImage.classList.remove("hidden");
+      inputPlaceholder.classList.add("hidden");
+      resultSection.classList.add("visible");
+      reportHeight();
+    }
+
+    // Single-image tools return result_url; generation tools return result_urls.
+    function resultUrl(output) {
+      return output?.result_url || output?.result_urls?.[0];
+    }
+
+    function showResult(output) {
+      currentResult = output;
+
+      if (output.input_url) {
+        inputImage.src = output.input_url;
+        inputImage.classList.remove("hidden");
+        inputPlaceholder.classList.add("hidden");
+      }
+
+      if (resultUrl(output)) {
+        resultImage.src = resultUrl(output);
+        resultImage.classList.remove("hidden");
+        resultPlaceholder.classList.add("hidden");
+        downloadBtn.href = resultUrl(output);
+      }
+
+      resultSection.classList.add("visible");
+      reportHeight();
+    }
+
+    function addToHistory(output) {
+      if (!resultUrl(output)) return;
+
+      // Avoid duplicates
+      if (history.some((h) => resultUrl(h) === resultUrl(output))) return;
+
+      history.unshift(output);
+      if (history.length > 10) history.pop();
+
+      renderHistory();
+      saveWidgetState();
+    }
+
+    function renderHistory() {
+      if (history.length === 0) {
+        historySection.classList.add("hidden");
+        return;
+      }
+
+      historySection.classList.remove("hidden");
+
+      // Clear existing items using safe DOM methods
+      while (historyItems.firstChild) {
+        historyItems.removeChild(historyItems.firstChild);
+      }
+
+      // Build history items using safe DOM methods
+      history.forEach((item, idx) => {
+        const div = document.createElement("div");
+        div.className = "history-item";
+        div.dataset.idx = String(idx);
+
+        const img = document.createElement("img");
+        img.src = resultUrl(item);
+        img.alt = "Result " + (idx + 1);
+
+        div.appendChild(img);
+
+        // Click handler
+        div.addEventListener("click", () => {
+          showResult(history[idx]);
+        });
+
+        historyItems.appendChild(div);
+      });
+
+      reportHeight();
+    }
+
+    function setStatus(type, message) {
+      statusDiv.className = "status " + type;
+
+      // Clear existing content
+      while (statusDiv.firstChild) {
+        statusDiv.removeChild(statusDiv.firstChild);
+      }
+
+      if (type === "loading") {
+        const spinner = document.createElement("span");
+        spinner.className = "spinner";
+        statusDiv.appendChild(spinner);
+      }
+
+      const textNode = document.createTextNode(message);
+      statusDiv.appendChild(textNode);
+
+      statusDiv.classList.remove("hidden");
+
+      if (type !== "loading") {
+        setTimeout(() => {
+          statusDiv.classList.add("hidden");
+        }, 5000);
+      }
+
+      reportHeight();
+    }
+
+    function updateProcessButton() {
+      processBtn.disabled = isProcessing;
+      processBtn.textContent = isProcessing ? "Processing..." : "Process Image";
+    }
+
+    // Copy URL button
+    copyUrlBtn.addEventListener("click", async () => {
+      if (resultUrl(currentResult)) {
+        try {
+          await navigator.clipboard.writeText(resultUrl(currentResult));
+          copyUrlBtn.textContent = "Copied!";
+          setTimeout(() => {
+            copyUrlBtn.textContent = "Copy URL";
+          }, 2000);
+        } catch {
+          setStatus("error", "Failed to copy URL");
+        }
+      }
+    });
+
+    // Initialize
+    initFromOpenAI();
+  </script>
+</body>
+</html>
