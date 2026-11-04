@@ -414,7 +414,7 @@ export class SirvApiClient {
       image_url: imageUrl,
       prompt: options.prompt,
       ref_image_url: options.refImageUrl,
-      model: options.model || "nano-banana-lite",
+      model: options.model,
     });
     const url = this.extractImageUrl(data);
     if (!url) throw new Error("No image returned from background replacement");

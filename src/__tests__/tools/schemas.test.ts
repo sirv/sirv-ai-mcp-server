@@ -209,7 +209,7 @@ describe("BackgroundReplaceSchema", () => {
 
     const result = BackgroundReplaceSchema.safeParse(input);
     expect(result.success).toBe(true);
-    expect(result.data?.model).toBe("nano-banana-lite");
+    expect(result.data?.model).toBe("ideogram-keep");
   });
 
   it("accepts and canonicalizes the retired Nano Banana identifier", () => {

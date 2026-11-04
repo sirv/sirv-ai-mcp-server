@@ -67,10 +67,10 @@ export const BackgroundReplaceSchema = z.object({
     .describe("URL of a reference image for the new background style"),
   model: z.preprocess(
     (value) => value === "nano-banana" ? "nano-banana-lite" : value,
-    z.enum(["nano-banana-lite", "bria", "flux3-edit"])
-      .default("nano-banana-lite"),
+    z.enum(["ideogram-keep", "nano-banana-lite", "bria", "flux3-edit"])
+      .default("ideogram-keep"),
   )
-    .describe("Background replacement model. Nano Banana 2 Lite is the default"),
+    .describe("Background replacement model. The default, ideogram-keep, keeps the product's own pixels; the others can redraw the product"),
 }).strict();
 
 const ObjectRemovalSchema = z.object({

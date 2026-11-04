@@ -1,7 +1,7 @@
 {
   "name": "sirv-ai-mcp-server",
   "mcpName": "io.github.sirv/sirv-ai-mcp-server",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server for Sirv AI Studio - AI-powered image and video processing",
   "author": "Sirv Ltd (https://www.sirv.studio)",
   "license": "MIT",

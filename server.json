@@ -3,7 +3,7 @@
   "name": "io.github.sirv/sirv-ai-mcp-server",
   "title": "Sirv AI Studio",
   "description": "AI image, video and 3D tools, assets, products and Shopify for Sirv AI Studio.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "websiteUrl": "https://www.sirv.studio/docs/developers/mcp",
   "repository": {
     "url": "https://github.com/sirv/sirv-ai-mcp-server",
@@ -13,7 +13,7 @@
     {
       "registryType": "npm",
       "identifier": "sirv-ai-mcp-server",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "transport": { "type": "stdio" },
       "environmentVariables": [
         {

@@ -16,9 +16,9 @@ const ProductLifestyleSchema = z.object({
     .optional()
     .describe("URL of a reference image for the scene style"),
   model: z
-    .enum(["nano-banana-lite", "bria", "gemini", "gpt-image-2", "seedream", "flux3"])
-    .default("nano-banana-lite")
-    .describe("Lifestyle image model. Nano Banana 2 Lite is the default"),
+    .enum(["ideogram-keep", "nano-banana-lite", "bria", "gemini", "gpt-image-2", "seedream", "flux3"])
+    .default("ideogram-keep")
+    .describe("Lifestyle image model. The default, ideogram-keep, keeps the product's own pixels; the others can redraw the product"),
   placement_type: z
     .enum(["original", "automatic", "manual_placement", "manual_padding"])
     .default("automatic")
